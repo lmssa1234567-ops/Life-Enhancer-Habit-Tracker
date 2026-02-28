@@ -40,19 +40,11 @@ jobs:
       - name: Publish Blazor app
         run: dotnet publish Life-Enhancer-Habit-Tracker.csproj -c Release -o release /p:StaticWebAssetBasePath=/Life-Enhancer-Habit-Tracker/
 
-      - name: Debug - Check what was published
-        run: |
-          echo "=== Contents of release directory ==="
-          ls -la release/
-          echo ""
-          echo "=== Looking for wwwroot ==="
-          find release -name "wwwroot" -o -name "index.html" 2>/dev/null | head -20
-
       - name: Add SPA fallback
-        run: cp release/wwwroot/index.html release/wwwroot/404.html
+        run: cp release/wwwroot/Life-Enhancer-Habit-Tracker/index.html release/wwwroot/Life-Enhancer-Habit-Tracker/404.html
 
       - name: Disable Jekyll
-        run: touch release/wwwroot/.nojekyll
+        run: touch release/wwwroot/Life-Enhancer-Habit-Tracker/.nojekyll
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -60,7 +52,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: release/wwwroot
+          path: release/wwwroot/Life-Enhancer-Habit-Tracker
 
       - name: Deploy to GitHub Pages
         id: deployment

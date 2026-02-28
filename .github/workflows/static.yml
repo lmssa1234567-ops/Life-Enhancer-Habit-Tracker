@@ -40,6 +40,12 @@ jobs:
       - name: Publish Blazor app
         run: dotnet publish Life-Enhancer-Habit-Tracker.csproj -c Release -o release /p:StaticWebAssetBasePath=/Life-Enhancer-Habit-Tracker/
 
+      - name: Debug - List release directory
+        run: ls -la release/
+
+      - name: Debug - List release/wwwroot or release/www
+        run: ls -la release/www* || echo "No www* directories found"
+
       - name: Add SPA fallback
         run: cp release/wwwroot/index.html release/wwwroot/404.html
 

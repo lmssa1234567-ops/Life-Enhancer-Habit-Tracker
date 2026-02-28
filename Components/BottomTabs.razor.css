@@ -1,0 +1,44 @@
+﻿.bottom-tabs {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 64px;
+    border-top: 1px solid var(--divider);
+    background: var(--surface);
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    z-index: 90;
+}
+
+.tab-item {
+    min-height: 64px;
+    display: grid;
+    place-items: center;
+    text-decoration: none;
+    color: var(--muted);
+    font-size: 0.72rem;
+    gap: 0.05rem;
+}
+
+.tab-icon {
+    font-size: 1.05rem;
+    line-height: 1;
+}
+
+.tab-item.active {
+    color: var(--primary);
+    font-weight: 600;
+}
+
+@media (min-width: 980px) {
+    .bottom-tabs {
+        left: 272px;
+    }
+}
+
+@media (max-width: 860px) {
+    .bottom-tabs {
+        left: 0;
+    }
+}

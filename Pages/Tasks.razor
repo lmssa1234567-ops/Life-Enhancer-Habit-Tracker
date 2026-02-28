@@ -1,0 +1,251 @@
+﻿@page "/tasks"
+@inject TaskService TaskService
+
+<PageTitle>Tasks</PageTitle>
+
+<section class="tasks-shell">
+    <header class="tasks-header card">
+        <div>
+            <h1>Tasks</h1>
+            <small>Enter hours for scheduled days only.</small>
+        </div>
+        <button class="btn btn-primary" @onclick="ToggleCreatePanel">@(_showCreatePanel ? "Close" : "+ New")</button>
+    </header>
+
+    @if (_showCreatePanel)
+    {
+        <section class="card form-card">
+            <h3>Add Task</h3>
+            <div class="grid">
+                <input @bind="taskModel.Name" maxlength="60" placeholder="Name" />
+                <input @bind="taskModel.TargetHours" type="number" min="0" max="24" step="0.5" placeholder="Target Hours" />
+
+                <select @bind="taskModel.ScheduleType" @bind:after="OnScheduleTypeChanged">
+                    <option value="@ScheduleType.Daily">Daily (All 7 days)</option>
+                    <option value="@ScheduleType.SpecificDays">Specific Days</option>
+                </select>
+
+                @if (taskModel.ScheduleType == ScheduleType.SpecificDays)
+                {
+                    <div class="specific-days-wrap">
+                        <small>Select days</small>
+                        <div class="specific-days-grid">
+                            @foreach (var day in orderedDays)
+                            {
+                                var selected = selectedSpecificDays.Contains(day);
+                                <button type="button" class="day-chip @(selected ? "selected" : string.Empty)" @onclick="() => ToggleSpecificDay(day)">
+                                    @ShortDay(day)
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <button class="btn btn-primary" @onclick="SaveTaskAsync">Save Task</button>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <p class="error-note">@_errorMessage</p>
+            }
+        </section>
+    }
+
+    <section class="card task-table-card">
+        <div class="task-table-inner">
+            <div class="task-table-head">
+                <div>Task</div>
+                <div class="week-grid-head">
+                    @foreach (var day in sevenDays)
+                    {
+                        <div class="day-head" @key="day">
+                            <span>@day.ToString("ddd").Substring(0, 1)</span>
+                            <small>@day.Day</small>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @if (tasks.Count == 0)
+            {
+                <p class="empty-note">No tasks yet. Add your first task.</p>
+            }
+            else
+            {
+                @foreach (var item in tasks)
+                {
+                    <article class="task-row" @key="item.Id">
+                        <div class="task-meta">
+                            <h3>@item.Name</h3>
+                            <small>@ScheduleLabel(item)</small>
+                            <small class="weekly-hours">@WeeklyHours(item).ToString("0.#")h total this week</small>
+                        </div>
+
+                        <div class="week-grid">
+                            @foreach (var day in sevenDays)
+                            {
+                                var scheduled = IsScheduledOnDay(item, day);
+                                var log = logs.FirstOrDefault(x => x.TaskId == item.Id && x.Date == day);
+                                var hours = log?.Hours ?? 0;
+                                var ignored = log?.Ignored ?? false;
+                                var css = CellClass(scheduled, ignored, hours, item.TargetHours);
+
+                                <div class="task-cell @css" @key="day">
+                                    @if (!scheduled)
+                                    {
+                                        <span class="disabled-mark">-</span>
+                                    }
+                                    else
+                                    {
+                                        <input type="number" min="0" max="24" step="0.5" value="@hours" @onchange="(e) => UpdateHours(item.Id, day, e.Value?.ToString())" />
+                                        <label><input type="checkbox" checked="@ignored" @onchange="(e) => UpdateIgnored(item.Id, day, e.Value)" /> Ig</label>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </article>
+                }
+            }
+        </div>
+    </section>
+</section>
+
+@code {
+    private readonly List<DayOfWeek> orderedDays =
+    [
+        DayOfWeek.Sunday,
+        DayOfWeek.Monday,
+        DayOfWeek.Tuesday,
+        DayOfWeek.Wednesday,
+        DayOfWeek.Thursday,
+        DayOfWeek.Friday,
+        DayOfWeek.Saturday
+    ];
+
+    private TaskItem taskModel = new();
+    private List<TaskItem> tasks = new();
+    private List<TaskLog> logs = new();
+    private HashSet<DayOfWeek> selectedSpecificDays = new();
+    private bool _showCreatePanel;
+    private string _errorMessage = string.Empty;
+
+    private readonly List<DateOnly> sevenDays = Enumerable.Range(0, 7)
+        .Select(i => DateOnly.FromDateTime(DateTime.Today.AddDays(-6 + i)))
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ResetCreateModel();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        tasks = await TaskService.GetTasksAsync();
+        logs = await TaskService.GetLogsAsync(sevenDays.First(), sevenDays.Last());
+    }
+
+    private void ToggleCreatePanel() => _showCreatePanel = !_showCreatePanel;
+
+    private Task OnScheduleTypeChanged()
+    {
+        if (taskModel.ScheduleType == ScheduleType.Daily)
+        {
+            selectedSpecificDays = orderedDays.ToHashSet();
+        }
+        else if (selectedSpecificDays.Count == 0)
+        {
+            selectedSpecificDays.Add(DateTime.Today.DayOfWeek);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void ToggleSpecificDay(DayOfWeek day)
+    {
+        if (selectedSpecificDays.Contains(day))
+        {
+            selectedSpecificDays.Remove(day);
+            return;
+        }
+
+        selectedSpecificDays.Add(day);
+    }
+
+    private async Task SaveTaskAsync()
+    {
+        try
+        {
+            taskModel.SpecificDays = taskModel.ScheduleType == ScheduleType.Daily
+                ? orderedDays.ToList()
+                : selectedSpecificDays.ToList();
+
+            await TaskService.SaveTaskAsync(taskModel);
+            _errorMessage = string.Empty;
+            _showCreatePanel = false;
+            ResetCreateModel();
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private void ResetCreateModel()
+    {
+        taskModel = new TaskItem
+        {
+            ScheduleType = ScheduleType.Daily,
+            TargetHours = 1
+        };
+        selectedSpecificDays = orderedDays.ToHashSet();
+    }
+
+    private async Task UpdateHours(Guid taskId, DateOnly day, string? text)
+    {
+        _ = decimal.TryParse(text, out var hours);
+        var ignored = logs.FirstOrDefault(x => x.TaskId == taskId && x.Date == day)?.Ignored ?? false;
+        await TaskService.UpsertLogAsync(taskId, day, hours, ignored);
+        await LoadAsync();
+    }
+
+    private async Task UpdateIgnored(Guid taskId, DateOnly day, object? value)
+    {
+        var ignored = value as bool? ?? false;
+        var hours = logs.FirstOrDefault(x => x.TaskId == taskId && x.Date == day)?.Hours ?? 0;
+        await TaskService.UpsertLogAsync(taskId, day, hours, ignored);
+        await LoadAsync();
+    }
+
+    private bool IsScheduledOnDay(TaskItem item, DateOnly day) => TaskService.IsScheduledOnDate(item, day);
+
+    private static string ShortDay(DayOfWeek day) => day.ToString()[..3];
+
+    private static string ScheduleLabel(TaskItem item)
+    {
+        var days = item.ScheduleType == ScheduleType.Daily
+            ? "Daily"
+            : string.Join(", ", (item.SpecificDays ?? new List<DayOfWeek>()).OrderBy(d => (int)d).Select(ShortDay));
+
+        return $"{days} | Target {item.TargetHours:0.#}h";
+    }
+
+    private decimal WeeklyHours(TaskItem item) =>
+        logs.Where(log => log.TaskId == item.Id && !log.Ignored && IsScheduledOnDay(item, log.Date)).Sum(log => log.Hours);
+
+    private static string CellClass(bool scheduled, bool ignored, decimal value, decimal targetHours)
+    {
+        if (!scheduled)
+        {
+            return "task-cell-disabled";
+        }
+
+        if (ignored)
+        {
+            return "task-cell-ignored";
+        }
+
+        return value >= targetHours ? "task-cell-good" : "task-cell-bad";
+    }
+}

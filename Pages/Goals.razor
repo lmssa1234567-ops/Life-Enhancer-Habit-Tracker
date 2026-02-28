@@ -1,0 +1,94 @@
+﻿@page "/goals"
+@inject GoalService GoalService
+
+<h1>Goals</h1>
+
+<section class="card">
+    <h3>Category</h3>
+    <div class="grid">
+        <input @bind="categoryName" maxlength="40" placeholder="Category name" />
+        <button class="btn btn-primary" @onclick="AddCategoryAsync">Add Category</button>
+    </div>
+</section>
+
+<section class="card">
+    <h3>Goal</h3>
+    <div class="grid">
+        <input @bind="goalModel.Name" maxlength="80" placeholder="Goal name" />
+        <select @bind="goalModel.CategoryId">
+            <option value="@Guid.Empty">Select Category</option>
+            @foreach (var cat in categories)
+            {
+                <option value="@cat.Id">@cat.Name</option>
+            }
+        </select>
+        <input type="date" @bind="targetDate" />
+        <button class="btn btn-primary" @onclick="AddGoalAsync">Add Goal</button>
+    </div>
+</section>
+
+<section class="card">
+    <h3>Goal List</h3>
+    <select @bind="selectedCategoryId">
+        <option value="@Guid.Empty">All categories</option>
+        @foreach (var cat in categories)
+        {
+            <option value="@cat.Id">@cat.Name</option>
+        }
+    </select>
+
+    @foreach (var goal in FilteredGoals())
+    {
+        var categoryName = categories.FirstOrDefault(x => x.Id == goal.CategoryId)?.Name ?? "None";
+        <div class="card">
+            <h3>@goal.Name</h3>
+            <small>@categoryName | @goal.TargetDate.ToString("dd MMM yyyy")</small>
+            <div>
+                <span class="tag @(goal.IsCompleted ? "tag-green" : "tag-yellow")">@(goal.IsCompleted ? "Completed" : "Pending")</span>
+                <button class="btn btn-secondary" @onclick="() => ToggleGoalAsync(goal.Id)">Toggle</button>
+            </div>
+        </div>
+    }
+</section>
+
+@code {
+    private string categoryName = string.Empty;
+    private Goal goalModel = new();
+    private DateTime targetDate = DateTime.Today.AddMonths(1);
+    private Guid selectedCategoryId = Guid.Empty;
+
+    private List<GoalCategory> categories = new();
+    private List<Goal> goals = new();
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        categories = await GoalService.GetCategoriesAsync();
+        goals = await GoalService.GetGoalsAsync();
+    }
+
+    private async Task AddCategoryAsync()
+    {
+        await GoalService.SaveCategoryAsync(new GoalCategory { Name = categoryName.Trim() });
+        categoryName = string.Empty;
+        await LoadAsync();
+    }
+
+    private async Task AddGoalAsync()
+    {
+        goalModel.TargetDate = DateOnly.FromDateTime(targetDate);
+        await GoalService.SaveGoalAsync(goalModel);
+        goalModel = new Goal();
+        targetDate = DateTime.Today.AddMonths(1);
+        await LoadAsync();
+    }
+
+    private IEnumerable<Goal> FilteredGoals() => selectedCategoryId == Guid.Empty ? goals : goals.Where(x => x.CategoryId == selectedCategoryId);
+
+    private async Task ToggleGoalAsync(Guid id)
+    {
+        await GoalService.ToggleGoalAsync(id);
+        await LoadAsync();
+    }
+}

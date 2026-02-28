@@ -1,0 +1,48 @@
+﻿.app-shell {
+    display: flex;
+    min-height: 100vh;
+    background: var(--bg);
+}
+
+.main-content {
+    flex: 1;
+    padding: 0.65rem 0.65rem 4.8rem;
+}
+
+.content {
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+.lock-screen {
+    max-width: 420px;
+    margin: 10vh auto;
+    padding: 1rem;
+    border-radius: 0.8rem;
+    background: var(--surface);
+    border: 1px solid var(--divider);
+    display: grid;
+    gap: 0.65rem;
+}
+
+.input {
+    width: 100%;
+    min-height: 44px;
+    border-radius: 0.6rem;
+    border: 1px solid var(--divider);
+    padding: 0.55rem;
+}
+
+.btn-touch {
+    min-height: 44px;
+}
+
+.error-text {
+    color: var(--danger);
+}
+
+@media (max-width: 860px) {
+    .app-shell {
+        flex-direction: column;
+    }
+}

@@ -1,0 +1,277 @@
+﻿@page "/routines"
+@inject RoutineService RoutineService
+
+<PageTitle>Habits</PageTitle>
+
+<section class="habits-shell">
+    <header class="habits-header card">
+        <div>
+            <h1>Habits</h1>
+            <small>Tap each scheduled day to cycle: ? -> ✓ -> X -> !</small>
+        </div>
+        <button class="btn btn-primary" @onclick="ToggleCreatePanel">@(_showCreatePanel ? "Close" : "+ New")</button>
+    </header>
+
+    @if (_showCreatePanel)
+    {
+        <section class="card form-card">
+            <h3>Add Habit</h3>
+            <div class="grid">
+                <input @bind="model.Name" maxlength="60" placeholder="Name" />
+
+                <select @bind="model.ScheduleType" @bind:after="OnScheduleTypeChanged">
+                    <option value="@ScheduleType.Daily">Daily (All 7 days)</option>
+                    <option value="@ScheduleType.SpecificDays">Specific Days</option>
+                </select>
+
+                @if (model.ScheduleType == ScheduleType.SpecificDays)
+                {
+                    <div class="specific-days-wrap">
+                        <small>Select days</small>
+                        <div class="specific-days-grid">
+                            @foreach (var day in orderedDays)
+                            {
+                                var selected = selectedSpecificDays.Contains(day);
+                                <button type="button" class="day-chip @(selected ? "selected" : string.Empty)" @onclick="() => ToggleSpecificDay(day)">
+                                    @ShortDay(day)
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+
+                <div class="grid grid-2">
+                    <div>
+                        <small>From</small>
+                        <input type="time" value="@model.FromTime" @onchange="OnFromTimeChanged" />
+                    </div>
+                    <div>
+                        <small>To</small>
+                        <input type="time" value="@model.ToTime" @onchange="OnToTimeChanged" />
+                    </div>
+                </div>
+
+                <input @bind="model.MeasurementType" maxlength="30" placeholder="Measurement Type" />
+                <label class="checkbox-row"><input type="checkbox" @bind="model.IsRecurring" /> Recurring</label>
+                <button class="btn btn-primary" @onclick="SaveAsync">Save Habit</button>
+            </div>
+            @if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <p class="error-note">@_errorMessage</p>
+            }
+        </section>
+    }
+
+    <section class="card habit-table-card">
+        <div class="habit-table-inner">
+            <div class="habit-table-head">
+                <div>Habit</div>
+                <div class="week-grid-head">
+                    @foreach (var day in sevenDays)
+                    {
+                        <div class="day-head" @key="day">
+                            <span>@day.ToString("ddd").Substring(0, 1)</span>
+                            <small>@day.Day</small>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @if (routines.Count == 0)
+            {
+                <p class="empty-note">No habits yet. Add your first habit.</p>
+            }
+            else
+            {
+                @foreach (var indexed in routines.Select((routine, index) => new { routine, index }))
+                {
+                    var accent = HabitColor(indexed.index);
+                    <article class="habit-row" @key="indexed.routine.Id">
+                        <div class="habit-meta" style="--accent:@accent">
+                            <h3>@indexed.routine.Name</h3>
+                            <small>@ScheduleLabel(indexed.routine)</small>
+                        </div>
+
+                        <div class="week-grid">
+                            @foreach (var day in sevenDays)
+                            {
+                                var status = GetStatus(indexed.routine.Id, day);
+                                var scheduled = IsScheduledOnDay(indexed.routine, day);
+                                <button
+                                    class="habit-cell @(scheduled ? CellClass(status) : "cell-disabled")"
+                                    style="--accent:@accent"
+                                    disabled="@(!scheduled)"
+                                    @onclick="() => ToggleStatusAsync(indexed.routine, day)"
+                                    @key="day">
+                                    @(scheduled ? StatusSymbol(status) : "-")
+                                </button>
+                            }
+                        </div>
+                    </article>
+                }
+            }
+        </div>
+    </section>
+</section>
+
+@code {
+    private readonly string[] _colorPalette = ["#4FC3F7", "#81C784", "#FF8A65", "#9575CD", "#FFD54F", "#4DB6AC"];
+    private readonly List<DayOfWeek> orderedDays =
+    [
+        DayOfWeek.Sunday,
+        DayOfWeek.Monday,
+        DayOfWeek.Tuesday,
+        DayOfWeek.Wednesday,
+        DayOfWeek.Thursday,
+        DayOfWeek.Friday,
+        DayOfWeek.Saturday
+    ];
+
+    private Routine model = new();
+    private List<Routine> routines = new();
+    private List<RoutineLog> logs = new();
+    private HashSet<DayOfWeek> selectedSpecificDays = new();
+    private bool _showCreatePanel;
+    private string _errorMessage = string.Empty;
+
+    private readonly List<DateOnly> sevenDays = Enumerable.Range(0, 7)
+        .Select(i => DateOnly.FromDateTime(DateTime.Today.AddDays(-6 + i)))
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        ResetCreateModel();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        routines = await RoutineService.GetRoutinesAsync();
+        logs = await RoutineService.GetLogsForDateRangeAsync(sevenDays.First(), sevenDays.Last());
+    }
+
+    private void ToggleCreatePanel() => _showCreatePanel = !_showCreatePanel;
+
+    private Task OnScheduleTypeChanged()
+    {
+        if (model.ScheduleType == ScheduleType.Daily)
+        {
+            selectedSpecificDays = orderedDays.ToHashSet();
+        }
+        else if (selectedSpecificDays.Count == 0)
+        {
+            selectedSpecificDays.Add(DateTime.Today.DayOfWeek);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    private void ToggleSpecificDay(DayOfWeek day)
+    {
+        if (selectedSpecificDays.Contains(day))
+        {
+            selectedSpecificDays.Remove(day);
+            return;
+        }
+
+        selectedSpecificDays.Add(day);
+    }
+
+    private void OnFromTimeChanged(ChangeEventArgs eventArgs)
+    {
+        model.FromTime = eventArgs.Value?.ToString() ?? "06:00";
+    }
+
+    private void OnToTimeChanged(ChangeEventArgs eventArgs)
+    {
+        model.ToTime = eventArgs.Value?.ToString() ?? "07:00";
+    }
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            model.SpecificDays = model.ScheduleType == ScheduleType.Daily
+                ? orderedDays.ToList()
+                : selectedSpecificDays.ToList();
+
+            await RoutineService.SaveRoutineAsync(model);
+            _errorMessage = string.Empty;
+            _showCreatePanel = false;
+            ResetCreateModel();
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+    }
+
+    private void ResetCreateModel()
+    {
+        model = new Routine
+        {
+            ScheduleType = ScheduleType.Daily,
+            FromTime = "06:00",
+            ToTime = "07:00"
+        };
+
+        selectedSpecificDays = orderedDays.ToHashSet();
+    }
+
+    private RoutineStatus GetStatus(Guid routineId, DateOnly day)
+    {
+        return logs.FirstOrDefault(x => x.RoutineId == routineId && x.Date == day)?.Status ?? RoutineStatus.Default;
+    }
+
+    private async Task ToggleStatusAsync(Routine routine, DateOnly day)
+    {
+        if (!IsScheduledOnDay(routine, day))
+        {
+            return;
+        }
+
+        var current = GetStatus(routine.Id, day);
+        var next = current switch
+        {
+            RoutineStatus.Default => RoutineStatus.Followed,
+            RoutineStatus.Followed => RoutineStatus.NotFollowed,
+            RoutineStatus.NotFollowed => RoutineStatus.Ignored,
+            _ => RoutineStatus.Default
+        };
+
+        await RoutineService.SetStatusAsync(routine.Id, day, next);
+        await LoadAsync();
+    }
+
+    private bool IsScheduledOnDay(Routine routine, DateOnly day) => RoutineService.IsScheduledOnDate(routine, day);
+
+    private string HabitColor(int index) => _colorPalette[index % _colorPalette.Length];
+
+    private string ScheduleLabel(Routine routine)
+    {
+        var dayText = routine.ScheduleType == ScheduleType.Daily
+            ? "Daily"
+            : string.Join(", ", orderedDays.Where(d => routine.SpecificDays.Contains(d)).Select(ShortDay));
+
+        return $"{dayText} | {routine.FromTime} - {routine.ToTime}";
+    }
+
+    private static string ShortDay(DayOfWeek day) => day.ToString()[..3];
+
+    private static string StatusSymbol(RoutineStatus status) => status switch
+    {
+        RoutineStatus.Followed => "✓",
+        RoutineStatus.NotFollowed => "X",
+        RoutineStatus.Ignored => "!",
+        _ => "?"
+    };
+
+    private static string CellClass(RoutineStatus status) => status switch
+    {
+        RoutineStatus.Followed => "cell-followed",
+        RoutineStatus.NotFollowed => "cell-not-followed",
+        RoutineStatus.Ignored => "cell-ignored",
+        _ => "cell-default"
+    };
+}

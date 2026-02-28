@@ -1,0 +1,336 @@
+﻿@page "/"
+@inject RoutineService RoutineService
+@inject TaskService TaskService
+@inject MoodService MoodService
+@inject NotificationService NotificationService
+@inject VisualizationService VisualizationService
+
+<PageTitle>Dashboard</PageTitle>
+
+<section class="dashboard-shell">
+    <header class="card dashboard-header">
+        <div>
+            <h1>Dashboard</h1>
+            <small>Compact insights with charts</small>
+        </div>
+        <span class="tag tag-red">@notifications.Count</span>
+    </header>
+
+    <section class="card dashboard-tabs">
+        <button class="btn @(selectedPeriod == DashboardPeriod.Week ? "btn-primary" : "btn-secondary")" @onclick="() => ChangePeriodAsync(DashboardPeriod.Week)">Week</button>
+        <button class="btn @(selectedPeriod == DashboardPeriod.Month ? "btn-primary" : "btn-secondary")" @onclick="() => ChangePeriodAsync(DashboardPeriod.Month)">Month</button>
+        <button class="btn @(selectedPeriod == DashboardPeriod.Year ? "btn-primary" : "btn-secondary")" @onclick="() => ChangePeriodAsync(DashboardPeriod.Year)">Year</button>
+    </section>
+
+    <section class="card primary-summary">
+        <div class="completion-ring" style="--pct:@routineCompletionPercent">
+            <span>@routineCompletionPercent.ToString("0")%</span>
+        </div>
+
+        <div class="summary-lines">
+            <p><strong>Routine Completion</strong> (@selectedPeriod)</p>
+            <p>Task Ratio: <strong>@taskPerformanceRatio.ToString("0.00")</strong></p>
+            <p>Mood Avg: <strong>@moodAverage.ToString("0.0")</strong> / 5</p>
+        </div>
+    </section>
+
+    <section class="card">
+        <h3>Task Hours Chart</h3>
+        <div class="task-bars">
+            @foreach (var point in taskChart)
+            {
+                var height = maxTaskChartValue <= 0 ? 0 : Math.Round((point.Value / maxTaskChartValue) * 100, 1);
+                <div class="task-bar-col" @key="point.Label">
+                    <div class="task-bar-track">
+                        <div class="task-bar-fill" style="height:@height%"></div>
+                    </div>
+                    <small>@point.Label</small>
+                    <small>@point.Value.ToString("0.#")h</small>
+                </div>
+            }
+        </div>
+    </section>
+
+    <section class="card">
+        <h3>Mood Trend Chart</h3>
+        <div class="mood-trend">
+            @foreach (var point in moodChart)
+            {
+                var width = point.Value <= 0 ? 2 : Math.Round((point.Value / 5) * 100, 1);
+                <div class="mood-row" @key="point.Label">
+                    <small>@point.Label</small>
+                    <div class="mood-track">
+                        <div class="mood-fill" style="width:@width%"></div>
+                    </div>
+                    <small>@(point.Value <= 0 ? "-" : point.Value.ToString("0.0"))</small>
+                </div>
+            }
+        </div>
+    </section>
+
+    <section class="card">
+        <h3>Notifications</h3>
+        @if (notifications.Count == 0)
+        {
+            <p>All clear for this period.</p>
+        }
+        else
+        {
+            @foreach (var item in notifications)
+            {
+                <p @key="item.Message">@item.Message</p>
+            }
+        }
+    </section>
+
+    <section class="card">
+        <h3>AI Visualization</h3>
+        <p>@(aiVisualization?.Content ?? "Generate one from Visualization page.")</p>
+        @if (!string.IsNullOrWhiteSpace(aiVisualization?.AiProvider))
+        {
+            <small>Source: @aiVisualization.AiProvider</small>
+        }
+    </section>
+</section>
+
+@code {
+    private enum DashboardPeriod
+    {
+        Week,
+        Month,
+        Year
+    }
+
+    private sealed record ChartPoint(string Label, double Value);
+
+    private DashboardPeriod selectedPeriod = DashboardPeriod.Week;
+
+    private List<NotificationItem> notifications = new();
+    private VisualizationItem? aiVisualization;
+    private List<ChartPoint> taskChart = new();
+    private List<ChartPoint> moodChart = new();
+
+    private double routineCompletionPercent;
+    private double taskPerformanceRatio;
+    private double moodAverage;
+    private double maxTaskChartValue = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardAsync();
+    }
+
+    private async Task ChangePeriodAsync(DashboardPeriod period)
+    {
+        if (selectedPeriod == period)
+        {
+            return;
+        }
+
+        selectedPeriod = period;
+        await LoadDashboardAsync();
+    }
+
+    private async Task LoadDashboardAsync()
+    {
+        var range = GetRange(selectedPeriod);
+        var from = range.from;
+        var to = range.to;
+
+        var routines = await RoutineService.GetRoutinesAsync();
+        var routineLogs = await RoutineService.GetLogsForDateRangeAsync(from, to);
+        var tasks = await TaskService.GetTasksAsync();
+        var taskLogs = await TaskService.GetLogsAsync(from, to);
+        var moodLogs = (await MoodService.GetLogsAsync()).Where(x => x.Date >= from && x.Date <= to).ToList();
+
+        notifications = await NotificationService.GetNotificationsAsync();
+
+        var visualizations = await VisualizationService.GetAsync();
+        aiVisualization = visualizations.FirstOrDefault(x => x.IsAiGenerated);
+
+        routineCompletionPercent = CalculateRoutineCompletion(routines, routineLogs, from, to);
+        taskPerformanceRatio = CalculateTaskRatio(tasks, taskLogs, from, to);
+
+        taskChart = BuildTaskChart(taskLogs, from, to, selectedPeriod);
+        maxTaskChartValue = taskChart.Count == 0 ? 1 : Math.Max(1, taskChart.Max(x => x.Value));
+
+        moodChart = BuildMoodChart(moodLogs, from, to, selectedPeriod);
+        var moodValues = moodChart.Where(x => x.Value > 0).Select(x => x.Value).ToList();
+        moodAverage = moodValues.Count == 0 ? 0 : Math.Round(moodValues.Average(), 1);
+    }
+
+    private static (DateOnly from, DateOnly to) GetRange(DashboardPeriod period)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+
+        return period switch
+        {
+            DashboardPeriod.Month => (new DateOnly(today.Year, today.Month, 1), today),
+            DashboardPeriod.Year => (new DateOnly(today.Year, 1, 1), today),
+            _ => (today.AddDays(-6), today)
+        };
+    }
+
+    private static double CalculateRoutineCompletion(
+        IReadOnlyCollection<Routine> routines,
+        IReadOnlyCollection<RoutineLog> logs,
+        DateOnly from,
+        DateOnly to)
+    {
+        var lookup = logs
+            .GroupBy(x => (x.RoutineId, x.Date))
+            .ToDictionary(g => g.Key, g => g.Last().Status);
+
+        double expected = 0;
+        double followed = 0;
+
+        foreach (var routine in routines)
+        {
+            for (var day = from; day <= to; day = day.AddDays(1))
+            {
+                if (!RoutineService.IsScheduledOnDate(routine, day))
+                {
+                    continue;
+                }
+
+                expected += 1;
+
+                if (lookup.TryGetValue((routine.Id, day), out var status) && status == RoutineStatus.Followed)
+                {
+                    followed += 1;
+                }
+            }
+        }
+
+        return expected <= 0 ? 0 : Math.Round((followed / expected) * 100, 1);
+    }
+
+    private static double CalculateTaskRatio(
+        IReadOnlyCollection<TaskItem> tasks,
+        IReadOnlyCollection<TaskLog> logs,
+        DateOnly from,
+        DateOnly to)
+    {
+        double expected = 0;
+        foreach (var task in tasks)
+        {
+            for (var day = from; day <= to; day = day.AddDays(1))
+            {
+                if (TaskService.IsScheduledOnDate(task, day))
+                {
+                    expected += (double)task.TargetHours;
+                }
+            }
+        }
+
+        var actual = logs.Where(x => !x.Ignored).Sum(x => (double)x.Hours);
+        return expected <= 0 ? 0 : Math.Round(actual / expected, 2);
+    }
+
+    private static List<ChartPoint> BuildTaskChart(
+        IReadOnlyCollection<TaskLog> logs,
+        DateOnly from,
+        DateOnly to,
+        DashboardPeriod period)
+    {
+        var filtered = logs.Where(x => !x.Ignored).ToList();
+
+        return period switch
+        {
+            DashboardPeriod.Month => BuildWeeklyTaskPoints(filtered, from, to),
+            DashboardPeriod.Year => BuildMonthlyTaskPoints(filtered, from, to),
+            _ => BuildDailyTaskPoints(filtered, from, to)
+        };
+    }
+
+    private static List<ChartPoint> BuildMoodChart(
+        IReadOnlyCollection<MoodLog> logs,
+        DateOnly from,
+        DateOnly to,
+        DashboardPeriod period)
+    {
+        return period switch
+        {
+            DashboardPeriod.Month => BuildWeeklyMoodPoints(logs, from, to),
+            DashboardPeriod.Year => BuildMonthlyMoodPoints(logs, from, to),
+            _ => BuildDailyMoodPoints(logs, from, to)
+        };
+    }
+
+    private static List<ChartPoint> BuildDailyTaskPoints(IReadOnlyCollection<TaskLog> logs, DateOnly from, DateOnly to)
+    {
+        var points = new List<ChartPoint>();
+        for (var day = from; day <= to; day = day.AddDays(1))
+        {
+            var total = logs.Where(x => x.Date == day).Sum(x => (double)x.Hours);
+            points.Add(new ChartPoint(day.ToString("ddd"), total));
+        }
+
+        return points;
+    }
+
+    private static List<ChartPoint> BuildWeeklyTaskPoints(IReadOnlyCollection<TaskLog> logs, DateOnly from, DateOnly to)
+    {
+        var groups = logs.GroupBy(x => ((x.Date.Day - 1) / 7) + 1)
+            .ToDictionary(g => g.Key, g => g.Sum(item => (double)item.Hours));
+
+        var maxWeek = ((to.Day - 1) / 7) + 1;
+        return Enumerable.Range(1, maxWeek)
+            .Select(week => new ChartPoint($"W{week}", groups.TryGetValue(week, out var value) ? value : 0))
+            .ToList();
+    }
+
+    private static List<ChartPoint> BuildMonthlyTaskPoints(IReadOnlyCollection<TaskLog> logs, DateOnly from, DateOnly to)
+    {
+        var groups = logs.GroupBy(x => x.Date.Month)
+            .ToDictionary(g => g.Key, g => g.Sum(item => (double)item.Hours));
+
+        return Enumerable.Range(1, to.Month)
+            .Select(month =>
+                new ChartPoint(
+                    new DateTime(from.Year, month, 1).ToString("MMM"),
+                    groups.TryGetValue(month, out var value) ? value : 0))
+            .ToList();
+    }
+
+    private static List<ChartPoint> BuildDailyMoodPoints(IReadOnlyCollection<MoodLog> logs, DateOnly from, DateOnly to)
+    {
+        var lookup = logs
+            .GroupBy(x => x.Date)
+            .ToDictionary(g => g.Key, g => g.Average(item => (double)item.Scale));
+        var points = new List<ChartPoint>();
+
+        for (var day = from; day <= to; day = day.AddDays(1))
+        {
+            points.Add(new ChartPoint(day.ToString("ddd"), lookup.TryGetValue(day, out var value) ? value : 0));
+        }
+
+        return points;
+    }
+
+    private static List<ChartPoint> BuildWeeklyMoodPoints(IReadOnlyCollection<MoodLog> logs, DateOnly from, DateOnly to)
+    {
+        var groups = logs
+            .GroupBy(x => ((x.Date.Day - 1) / 7) + 1)
+            .ToDictionary(g => g.Key, g => g.Average(item => (double)item.Scale));
+
+        var maxWeek = ((to.Day - 1) / 7) + 1;
+        return Enumerable.Range(1, maxWeek)
+            .Select(week => new ChartPoint($"W{week}", groups.TryGetValue(week, out var value) ? Math.Round(value, 1) : 0))
+            .ToList();
+    }
+
+    private static List<ChartPoint> BuildMonthlyMoodPoints(IReadOnlyCollection<MoodLog> logs, DateOnly from, DateOnly to)
+    {
+        var groups = logs
+            .GroupBy(x => x.Date.Month)
+            .ToDictionary(g => g.Key, g => g.Average(item => (double)item.Scale));
+
+        return Enumerable.Range(1, to.Month)
+            .Select(month =>
+                new ChartPoint(
+                    new DateTime(from.Year, month, 1).ToString("MMM"),
+                    groups.TryGetValue(month, out var value) ? Math.Round(value, 1) : 0))
+            .ToList();
+    }
+}

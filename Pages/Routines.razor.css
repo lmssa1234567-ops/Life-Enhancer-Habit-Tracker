@@ -1,0 +1,185 @@
+﻿.habits-shell {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.habits-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.7rem;
+}
+
+.form-card {
+    border-style: dashed;
+}
+
+.specific-days-wrap {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.specific-days-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.35rem;
+}
+
+.day-chip {
+    min-height: 38px;
+    border: 1px solid var(--divider);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.78rem;
+}
+
+.day-chip.selected {
+    border-color: color-mix(in srgb, var(--primary) 60%, var(--surface));
+    background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+    color: var(--primary);
+    font-weight: 600;
+}
+
+.checkbox-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.error-note {
+    margin-top: 0.5rem;
+    color: var(--danger);
+}
+
+.habit-table-card {
+    padding: 0;
+    overflow-x: auto;
+}
+
+.habit-table-inner {
+    min-width: 620px;
+}
+
+.habit-table-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    padding: 0.65rem 0.75rem;
+    background: var(--surface-soft);
+    border-bottom: 1px solid var(--divider);
+    font-size: 0.85rem;
+    color: var(--muted);
+    align-items: center;
+}
+
+.week-grid-head,
+.week-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(32px, 1fr));
+    gap: 0.32rem;
+}
+
+.day-head {
+    width: 30px;
+    text-align: center;
+}
+
+.day-head span {
+    display: block;
+    font-size: 0.68rem;
+}
+
+.day-head small {
+    font-size: 0.7rem;
+}
+
+.habit-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.58rem 0.75rem;
+    border-bottom: 1px solid var(--divider);
+}
+
+.habit-row:last-child {
+    border-bottom: 0;
+}
+
+.habit-meta {
+    border-left: 4px solid var(--accent);
+    padding-left: 0.55rem;
+    display: grid;
+    gap: 0.1rem;
+}
+
+.habit-meta h3 {
+    font-size: 0.9rem;
+    margin-bottom: 0.08rem;
+    font-weight: 500;
+}
+
+.habit-cell {
+    width: 30px;
+    min-height: 30px;
+    padding: 0;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-size: 0.72rem;
+    font-weight: 700;
+    background: color-mix(in srgb, var(--accent) 16%, var(--surface));
+    color: color-mix(in srgb, var(--text) 75%, var(--accent));
+    transition: transform 120ms ease, background-color 120ms ease;
+}
+
+.habit-cell:hover {
+    transform: translateY(-1px);
+}
+
+.cell-default {
+    border-color: var(--divider);
+    background: var(--surface);
+    color: var(--muted);
+}
+
+.cell-followed {
+    background: color-mix(in srgb, var(--success) 18%, var(--surface));
+    color: var(--success);
+    border-color: color-mix(in srgb, var(--success) 42%, var(--surface));
+}
+
+.cell-not-followed {
+    background: color-mix(in srgb, var(--danger) 16%, var(--surface));
+    color: var(--danger);
+    border-color: color-mix(in srgb, var(--danger) 42%, var(--surface));
+}
+
+.cell-ignored {
+    background: color-mix(in srgb, var(--warn) 24%, var(--surface));
+    color: #8a6a07;
+    border-color: color-mix(in srgb, var(--warn) 38%, var(--surface));
+}
+
+.cell-disabled {
+    border-color: var(--divider);
+    background: color-mix(in srgb, var(--muted) 10%, var(--surface));
+    color: color-mix(in srgb, var(--muted) 60%, transparent);
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.empty-note {
+    padding: 1rem;
+    color: var(--muted);
+}
+
+@media (max-width: 560px) {
+    .habit-table-card {
+        margin-left: -0.25rem;
+        margin-right: -0.25rem;
+    }
+
+    .habit-table-inner {
+        min-width: 560px;
+    }
+}

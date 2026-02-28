@@ -1,0 +1,32 @@
+﻿@page "/principles"
+@inject LifePrincipleService PrincipleService
+
+<h1>Life Principles</h1>
+
+<section class="card">
+    <textarea @bind="text" maxlength="280" placeholder="Write a principle"></textarea>
+    <button class="btn btn-primary" @onclick="SaveAsync">Add Principle</button>
+</section>
+
+<section class="card">
+    @foreach (var item in principles)
+    {
+        <p>@item.Text</p>
+    }
+</section>
+
+@code {
+    private string text = string.Empty;
+    private List<LifePrinciple> principles = new();
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync() => principles = await PrincipleService.GetAsync();
+
+    private async Task SaveAsync()
+    {
+        await PrincipleService.SaveAsync(text);
+        text = string.Empty;
+        await LoadAsync();
+    }
+}

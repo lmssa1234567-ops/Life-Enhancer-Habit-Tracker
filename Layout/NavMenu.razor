@@ -1,0 +1,33 @@
+﻿<div class="nav-head">
+    <button class="menu-button" @onclick="Toggle" aria-label="Toggle menu">☰</button>
+    <div class="title-wrap">
+        <span class="title">HABITS</span>
+        <small>Life Assistant</small>
+    </div>
+    @if (NotificationCount > 0)
+    {
+        <span class="badge">@NotificationCount</span>
+    }
+</div>
+
+<nav class="nav-menu @(isCollapsed ? "collapsed" : string.Empty)">
+    <NavLink class="nav-link-entry" data-icon="D" href="/" Match="NavLinkMatch.All">Dashboard</NavLink>
+    <NavLink class="nav-link-entry" data-icon="A" href="/accounts">Accounts</NavLink>
+    <NavLink class="nav-link-entry" data-icon="R" href="/reports">Reports</NavLink>
+    <NavLink class="nav-link-entry" data-icon="H" href="/routines">Habits</NavLink>
+    <NavLink class="nav-link-entry" data-icon="T" href="/tasks">Tasks</NavLink>
+    <NavLink class="nav-link-entry" data-icon="A" href="/actions">Actions</NavLink>
+    <NavLink class="nav-link-entry" data-icon="G" href="/goals">Goals</NavLink>
+    <NavLink class="nav-link-entry" data-icon="P" href="/principles">Principles</NavLink>
+    <NavLink class="nav-link-entry" data-icon="V" href="/visualizations">Visualize</NavLink>
+    <NavLink class="nav-link-entry" data-icon="M" href="/mood">Mood</NavLink>
+    <NavLink class="nav-link-entry" data-icon="S" href="/settings">Settings</NavLink>
+</nav>
+
+@code {
+    [Parameter] public int NotificationCount { get; set; }
+
+    private bool isCollapsed = true;
+
+    private void Toggle() => isCollapsed = !isCollapsed;
+}

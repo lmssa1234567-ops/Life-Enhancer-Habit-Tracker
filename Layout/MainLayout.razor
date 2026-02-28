@@ -1,0 +1,81 @@
+﻿@inherits LayoutComponentBase
+@inject PassphraseService PassphraseService
+@inject ThemeService ThemeService
+@inject NotificationService NotificationService
+@inject IJSRuntime JS
+
+<div class="app-shell">
+    <NavMenu NotificationCount="@_notificationCount" />
+
+    <main class="main-content">
+        @if (!_isUnlocked)
+        {
+            <section class="lock-screen">
+                <h2>Enter passphrase</h2>
+                <p>Use your passphrase to unlock local data.</p>
+                <small>Default passphrase on first launch: Jay Shree Krushna</small>
+                <input class="input" @bind="_passphrase" placeholder="Passphrase" type="password" maxlength="120" />
+                <button class="btn btn-primary btn-touch" @onclick="UnlockAsync">Unlock</button>
+                @if (!string.IsNullOrWhiteSpace(_error))
+                {
+                    <p class="error-text">@_error</p>
+                }
+            </section>
+        }
+        else
+        {
+            <article class="content">@Body</article>
+        }
+    </main>
+
+    @if (_isUnlocked)
+    {
+        <BottomTabs />
+    }
+</div>
+
+@code {
+    private bool _isUnlocked;
+    private string _passphrase = string.Empty;
+    private string _error = string.Empty;
+    private int _notificationCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await PassphraseService.EnsureInitializedAsync();
+        var theme = await ThemeService.GetThemeAsync();
+        await ThemeService.ApplyThemeAsync(string.IsNullOrWhiteSpace(theme) ? "light" : theme);
+        await RefreshNotificationCountAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        await JS.InvokeVoidAsync("habitDb.enableBeforeCloseExportPrompt");
+    }
+
+    private async Task UnlockAsync()
+    {
+        var valid = await PassphraseService.ValidateAsync(_passphrase);
+        if (!valid)
+        {
+            _error = "Invalid passphrase.";
+            return;
+        }
+
+        _error = string.Empty;
+        _passphrase = string.Empty;
+        _isUnlocked = true;
+        await RefreshNotificationCountAsync();
+    }
+
+    private async Task RefreshNotificationCountAsync()
+    {
+        var notifications = await NotificationService.GetNotificationsAsync();
+        _notificationCount = notifications.Count;
+    }
+}

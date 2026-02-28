@@ -1,0 +1,56 @@
+﻿@page "/actions"
+@inject ActionService ActionService
+
+<h1>Actions</h1>
+
+<section class="card">
+    <h3>Add Action</h3>
+    <div class="grid">
+        <input @bind="model.Name" maxlength="80" placeholder="Name" />
+        <input type="date" @bind="dueDate" />
+        <button class="btn btn-primary" @onclick="SaveAsync">Save Action</button>
+    </div>
+</section>
+
+@foreach (var item in actions)
+{
+    var css = item.IsDone ? "tag-green" : item.DueDate < today ? "tag-red" : "tag-gray";
+    <section class="card">
+        <div class="grid grid-2">
+            <div>
+                <h3>@item.Name</h3>
+                <small>Due @item.DueDate.ToString("dd MMM yyyy")</small>
+            </div>
+            <div>
+                <span class="tag @css">@(item.IsDone ? "Completed" : item.DueDate < today ? "Overdue" : "Open")</span>
+                <button class="btn btn-secondary" @onclick="() => ToggleDoneAsync(item.Id)">Toggle Done</button>
+            </div>
+        </div>
+    </section>
+}
+
+@code {
+    private ActionItem model = new();
+    private DateTime dueDate = DateTime.Today;
+    private List<ActionItem> actions = new();
+    private readonly DateOnly today = DateOnly.FromDateTime(DateTime.Today);
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync() => actions = await ActionService.GetActionsAsync();
+
+    private async Task SaveAsync()
+    {
+        model.DueDate = DateOnly.FromDateTime(dueDate);
+        await ActionService.SaveAsync(model);
+        model = new ActionItem();
+        dueDate = DateTime.Today;
+        await LoadAsync();
+    }
+
+    private async Task ToggleDoneAsync(Guid id)
+    {
+        await ActionService.ToggleDoneAsync(id);
+        await LoadAsync();
+    }
+}

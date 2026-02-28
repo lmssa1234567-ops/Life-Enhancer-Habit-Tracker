@@ -1,0 +1,70 @@
+﻿@page "/visualizations"
+@inject VisualizationService VisualizationService
+
+<h1>Visualization</h1>
+
+<section class="card">
+    <div class="grid">
+        <input @bind="model.Title" maxlength="80" placeholder="Title" />
+        <textarea @bind="model.Content" maxlength="1200" placeholder="Content"></textarea>
+        <label><input type="checkbox" @bind="model.IsTangible" /> Tangible</label>
+        <button class="btn btn-primary" @onclick="SaveAsync">Save</button>
+        <button class="btn btn-secondary" @onclick="GenerateAsync">Auto-generate (Free AI API)</button>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(status))
+    {
+        <p>@status</p>
+    }
+</section>
+
+@foreach (var item in items)
+{
+    <section class="card">
+        <h3>@item.Title</h3>
+        <p>@item.Content</p>
+        <small>@(item.IsTangible ? "Tangible" : "Intangible") | @(item.IsAiGenerated ? "AI" : "Manual") | @ProviderLabel(item)</small>
+    </section>
+}
+
+@code {
+    private VisualizationItem model = new();
+    private List<VisualizationItem> items = new();
+    private string status = string.Empty;
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync() => items = await VisualizationService.GetAsync();
+
+    private async Task SaveAsync()
+    {
+        try
+        {
+            await VisualizationService.SaveAsync(model);
+            model = new VisualizationItem();
+            status = "Visualization saved.";
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            status = ex.Message;
+        }
+    }
+
+    private async Task GenerateAsync()
+    {
+        try
+        {
+            var ai = await VisualizationService.GenerateAiVisualizationAsync();
+            await VisualizationService.SaveAsync(ai);
+            status = $"Generated with {ProviderLabel(ai)}.";
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            status = ex.Message;
+        }
+    }
+
+    private static string ProviderLabel(VisualizationItem item) =>
+        string.IsNullOrWhiteSpace(item.AiProvider) ? "Local" : item.AiProvider;
+}

@@ -1,0 +1,87 @@
+﻿@page "/settings"
+@inject IIndexedDbService IndexedDbService
+@inject PassphraseService PassphraseService
+@inject ThemeService ThemeService
+@inject IJSRuntime JS
+
+<h1>Settings</h1>
+
+<section class="card">
+    <h3>Theme</h3>
+    <select @bind="theme">
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+        <option value="custom">Custom</option>
+    </select>
+    <button class="btn btn-primary" @onclick="ApplyThemeAsync">Apply Theme</button>
+</section>
+
+<section class="card">
+    <h3>Change Passphrase</h3>
+    <input type="password" @bind="newPassphrase" maxlength="120" placeholder="New passphrase" />
+    <button class="btn btn-primary" @onclick="UpdatePassphraseAsync">Update</button>
+</section>
+
+<section class="card">
+    <h3>Export / Import</h3>
+    <button class="btn btn-secondary" @onclick="ExportAsync">Export JSON</button>
+    <textarea @bind="jsonPayload" rows="10" placeholder="Exported JSON or paste JSON for import"></textarea>
+    <button class="btn btn-primary" @onclick="ImportAsync">Import JSON</button>
+</section>
+
+@if (!string.IsNullOrWhiteSpace(status))
+{
+    <p>@status</p>
+}
+
+@code {
+    private string theme = "light";
+    private string newPassphrase = string.Empty;
+    private string jsonPayload = string.Empty;
+    private string status = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        theme = await ThemeService.GetThemeAsync();
+    }
+
+    private async Task ApplyThemeAsync()
+    {
+        await ThemeService.ApplyThemeAsync(theme);
+        status = "Theme updated.";
+    }
+
+    private async Task UpdatePassphraseAsync()
+    {
+        try
+        {
+            await PassphraseService.SetPassphraseAsync(newPassphrase);
+            newPassphrase = string.Empty;
+            status = "Passphrase updated.";
+        }
+        catch (Exception ex)
+        {
+            status = ex.Message;
+        }
+    }
+
+    private async Task ExportAsync()
+    {
+        jsonPayload = await IndexedDbService.ExportJsonAsync();
+        await JS.InvokeVoidAsync("habitDb.downloadJson", $"habit-export-{DateTime.Now:yyyyMMdd-HHmmss}.json", jsonPayload);
+        status = "Export completed and downloaded.";
+    }
+
+    private async Task ImportAsync()
+    {
+        try
+        {
+            await IndexedDbService.ImportJsonAsync(jsonPayload);
+            status = "Import completed.";
+        }
+        catch (Exception ex)
+        {
+            status = ex.Message;
+        }
+    }
+}

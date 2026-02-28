@@ -1,0 +1,244 @@
+﻿:root {
+    --bg: #eceff3;
+    --surface: #ffffff;
+    --surface-soft: #f6f7fa;
+    --text: #202124;
+    --muted: #6b7280;
+    --divider: #dde1e8;
+    --appbar: #293241;
+    --appbar-text: #ffffff;
+    --primary: #1c7ed6;
+    --danger: #d32f2f;
+    --success: #2f9e44;
+    --warn: #f9a825;
+}
+
+[data-theme="dark"] {
+    --bg: #14161a;
+    --surface: #1d2129;
+    --surface-soft: #252a34;
+    --text: #f3f4f6;
+    --muted: #a8b0bd;
+    --divider: #343b48;
+    --appbar: #0f1218;
+    --appbar-text: #f8fafc;
+    --primary: #5aa9ff;
+    --danger: #ef5350;
+    --success: #66bb6a;
+    --warn: #ffd54f;
+}
+
+[data-theme="custom"] {
+    --bg: #f7f3ea;
+    --surface: #fffaf1;
+    --surface-soft: #fdf1dd;
+    --text: #2d2a26;
+    --muted: #71685b;
+    --divider: #ebdecb;
+    --appbar: #46413b;
+    --appbar-text: #fff7e6;
+    --primary: #ff8f00;
+    --danger: #e64a19;
+    --success: #558b2f;
+    --warn: #fbc02d;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    font-family: "Noto Sans", "Trebuchet MS", "Segoe UI", sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.35;
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+    margin: 0;
+}
+
+h1 {
+    font-size: 1.18rem;
+    margin-bottom: 0.7rem;
+    letter-spacing: 0.015em;
+    font-weight: 600;
+}
+
+h3 {
+    font-size: 0.94rem;
+    margin-bottom: 0.4rem;
+    font-weight: 600;
+}
+
+small,
+label {
+    color: var(--muted);
+}
+
+.card {
+    background: var(--surface);
+    border: 1px solid var(--divider);
+    border-radius: 0.65rem;
+    padding: 0.8rem;
+    margin-bottom: 0.65rem;
+    box-shadow: 0 1px 1px rgba(17, 24, 39, 0.04);
+}
+
+.grid {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+input,
+select,
+textarea,
+button {
+    font: inherit;
+}
+
+input,
+select,
+textarea {
+    width: 100%;
+    min-height: 44px;
+    border: 1px solid var(--divider);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.62rem;
+    background: var(--surface);
+    color: var(--text);
+}
+
+input[type="checkbox"] {
+    width: 18px;
+    min-height: 18px;
+}
+
+button,
+.btn {
+    min-height: 44px;
+    border-radius: 0.5rem;
+    border: 1px solid transparent;
+    padding: 0.44rem 0.74rem;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: #fff;
+    font-weight: 600;
+}
+
+.btn-secondary {
+    background: transparent;
+    border-color: var(--divider);
+    color: var(--text);
+}
+
+.tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+    font-size: 0.75rem;
+}
+
+.tag-red {
+    background: color-mix(in srgb, var(--danger) 16%, transparent);
+    color: var(--danger);
+}
+
+.tag-green {
+    background: color-mix(in srgb, var(--success) 16%, transparent);
+    color: var(--success);
+}
+
+.tag-yellow {
+    background: color-mix(in srgb, var(--warn) 20%, transparent);
+    color: #8a6a07;
+}
+
+.tag-gray {
+    background: color-mix(in srgb, var(--muted) 18%, transparent);
+    color: var(--muted);
+}
+
+progress {
+    width: 100%;
+    height: 10px;
+    border: 0;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+progress::-webkit-progress-bar {
+    background: var(--surface-soft);
+}
+
+progress::-webkit-progress-value {
+    background: var(--primary);
+}
+
+progress::-moz-progress-bar {
+    background: var(--primary);
+}
+
+#blazor-error-ui {
+    display: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 0.8rem;
+    background: #fee2e2;
+    color: #7f1d1d;
+    border-top: 1px solid #fecaca;
+    z-index: 1000;
+}
+
+.loading-progress {
+    margin: 20vh auto 1rem;
+    display: block;
+    width: 72px;
+    height: 72px;
+}
+
+.loading-progress circle {
+    fill: none;
+    stroke: var(--divider);
+    stroke-width: 8;
+    transform-origin: 50% 50%;
+    transform: rotate(-90deg);
+}
+
+.loading-progress circle:last-child {
+    stroke: var(--primary);
+    stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
+}
+
+.loading-progress-text {
+    text-align: center;
+    color: var(--muted);
+}
+
+.loading-progress-text:after {
+    content: var(--blazor-load-percentage-text, "Loading...");
+}
+
+@media (max-width: 760px) {
+    .grid-2 {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1,0 +1,100 @@
+﻿@page "/reports"
+@inject SettingsService SettingsService
+@inject ThemeService ThemeService
+@inject NavigationManager NavigationManager
+
+<PageTitle>Reports</PageTitle>
+
+<section class="reports-shell">
+    <header class="card">
+        <h1>Reports</h1>
+        <small>Profile and settings</small>
+    </header>
+
+    <section class="card">
+        <div class="report-tabs">
+            <button class="btn @(activeTab == "profile" ? "btn-primary" : "btn-secondary")" @onclick="SetProfileTab">Profile</button>
+            <button class="btn @(activeTab == "settings" ? "btn-primary" : "btn-secondary")" @onclick="SetSettingsTab">Settings</button>
+        </div>
+    </section>
+
+    @if (activeTab == "profile")
+    {
+        <section class="card">
+            <h3>Profile</h3>
+            <div class="grid">
+                <input @bind="profileName" maxlength="60" placeholder="Profile name" />
+                <input @bind="profileEmail" maxlength="120" placeholder="Profile email" />
+                <button class="btn btn-primary" @onclick="SaveProfileAsync">Save Profile</button>
+            </div>
+        </section>
+    }
+    else
+    {
+        <section class="card">
+            <h3>Quick Settings</h3>
+            <div class="grid">
+                <select @bind="theme">
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                    <option value="custom">Custom</option>
+                </select>
+                <button class="btn btn-primary" @onclick="ApplyThemeAsync">Apply Theme</button>
+                <button class="btn btn-secondary" @onclick="OpenSettings">Open Full Settings</button>
+            </div>
+        </section>
+    }
+
+    @if (!string.IsNullOrWhiteSpace(status))
+    {
+        <p class="status-note">@status</p>
+    }
+</section>
+
+@code {
+    private string activeTab = "profile";
+    private string profileName = string.Empty;
+    private string profileEmail = string.Empty;
+    private string theme = "light";
+    private string status = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var settings = await SettingsService.GetSettingsAsync();
+        profileName = settings.ProfileName ?? "User";
+        profileEmail = settings.ProfileEmail ?? string.Empty;
+        theme = await ThemeService.GetThemeAsync();
+    }
+
+    private void SetTab(string tab)
+    {
+        activeTab = tab;
+        status = string.Empty;
+    }
+
+    private void SetProfileTab() => SetTab("profile");
+
+    private void SetSettingsTab() => SetTab("settings");
+
+    private async Task SaveProfileAsync()
+    {
+        try
+        {
+            await SettingsService.SaveProfileAsync(profileName, profileEmail);
+            status = "Profile saved.";
+        }
+        catch (Exception ex)
+        {
+            status = ex.Message;
+        }
+    }
+
+    private async Task ApplyThemeAsync()
+    {
+        await ThemeService.ApplyThemeAsync(theme);
+        status = "Theme updated.";
+    }
+
+    private void OpenSettings() => NavigationManager.NavigateTo("/settings");
+}
+

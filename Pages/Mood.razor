@@ -1,0 +1,41 @@
+﻿@page "/mood"
+@inject MoodService MoodService
+
+<h1>Mood Logging</h1>
+
+<section class="card">
+    <label>Mood scale (1-5)</label>
+    <input type="number" min="1" max="5" @bind="scale" />
+    <label>Notes (optional)</label>
+    <textarea @bind="notes" maxlength="400"></textarea>
+    <button class="btn btn-primary" @onclick="SaveAsync">Save Today</button>
+</section>
+
+<section class="card">
+    <h3>History</h3>
+    @foreach (var log in logs)
+    {
+        <div class="card">
+            <small>@log.Date.ToString("dd MMM yyyy")</small>
+            <div>Mood: @log.Scale / 5</div>
+            <div>@log.Notes</div>
+        </div>
+    }
+</section>
+
+@code {
+    private int scale = 3;
+    private string notes = string.Empty;
+    private List<MoodLog> logs = new();
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync() => logs = await MoodService.GetLogsAsync();
+
+    private async Task SaveAsync()
+    {
+        await MoodService.SaveTodayAsync(scale, notes);
+        notes = string.Empty;
+        await LoadAsync();
+    }
+}

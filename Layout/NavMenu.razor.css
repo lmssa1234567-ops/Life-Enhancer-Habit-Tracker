@@ -1,0 +1,113 @@
+﻿.nav-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem;
+    background: var(--appbar);
+    color: var(--appbar-text);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    border-bottom: 1px solid color-mix(in srgb, var(--appbar-text) 12%, transparent);
+}
+
+.menu-button {
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 999px;
+    border: 0;
+    background: color-mix(in srgb, var(--appbar-text) 16%, transparent);
+    color: var(--appbar-text);
+}
+
+.title-wrap {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.title {
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    font-size: 0.88rem;
+}
+
+.title-wrap small {
+    color: color-mix(in srgb, var(--appbar-text) 72%, transparent);
+    font-size: 0.72rem;
+}
+
+.badge {
+    margin-left: auto;
+    min-width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #ff7043;
+    color: #fff;
+    font-size: 0.75rem;
+    padding: 0 0.35rem;
+}
+
+.nav-menu {
+    width: 272px;
+    display: flex;
+    flex-direction: column;
+    background: var(--surface);
+    border-right: 1px solid var(--divider);
+    padding: 0.45rem;
+    gap: 0.2rem;
+}
+
+.nav-menu a {
+    text-decoration: none;
+    color: var(--text);
+    min-height: 44px;
+    padding: 0.5rem 0.65rem;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    border-left: 3px solid transparent;
+    gap: 0.55rem;
+}
+
+.nav-link-entry::before {
+    content: attr(data-icon);
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.68rem;
+    font-weight: 700;
+    background: color-mix(in srgb, var(--primary) 18%, transparent);
+    color: var(--primary);
+    flex: 0 0 auto;
+}
+
+.nav-menu a.active {
+    background: var(--surface-soft);
+    border-left-color: var(--primary);
+    font-weight: 500;
+    color: var(--text);
+}
+
+.nav-menu a.active::before {
+    background: var(--primary);
+    color: #fff;
+}
+
+@media (max-width: 860px) {
+    .nav-menu {
+        width: 100%;
+        border-right: 0;
+        border-bottom: 1px solid var(--divider);
+    }
+
+    .collapsed {
+        display: none;
+    }
+}

@@ -31,33 +31,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "9.0.x"
-
-      - name: Publish Blazor app
-        run: dotnet publish Life-Enhancer-Habit-Tracker.csproj -c Release -o release /p:StaticWebAssetBasePath=/Life-Enhancer-Habit-Tracker/
-
-      - name: Debug - List release directory
-        run: ls -la release/
-
-      - name: Debug - List release/wwwroot or release/www
-        run: ls -la release/www* || echo "No www* directories found"
-
-      - name: Add SPA fallback
-        run: cp release/wwwroot/index.html release/wwwroot/404.html
-
-      - name: Disable Jekyll
-        run: touch release/wwwroot/.nojekyll
-
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: release/wwwroot
+          # Upload entire repository
+          path: '.'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

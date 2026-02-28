@@ -1,4 +1,4 @@
-# Simple workflow for deploying static content to GitHub Pages
+# Simple workflow for deploying Blazor WebAssembly to GitHub Pages
 name: Deploy static content to Pages
 
 on:
@@ -31,13 +31,29 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+
+      - name: Publish Blazor app
+        run: dotnet publish Life-Enhancer-Habit-Tracker.csproj -c Release -o release /p:StaticWebAssetBasePath=/Life-Enhancer-Habit-Tracker/
+
+      - name: Add SPA fallback
+        run: cp release/wwwroot/index.html release/wwwroot/404.html
+
+      - name: Disable Jekyll
+        run: touch release/wwwroot/.nojekyll
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload entire repository
-          path: '.'
+          path: release/wwwroot
+
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4

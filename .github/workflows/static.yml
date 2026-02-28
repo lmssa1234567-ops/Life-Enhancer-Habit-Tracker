@@ -27,7 +27,7 @@ jobs:
           dotnet-version: "9.0.x"
 
       - name: Publish Blazor app
-        run: dotnet publish Life-Enhancer-Habit-Tracker.csproj -c Release -o release /p:StaticWebAssetBasePath=Life-Enhancer-Habit-Tracker
+        run: dotnet publish Life-Enhancer-Habit-Tracker.csproj -c Release -o release /p:StaticWebAssetBasePath=/Life-Enhancer-Habit-Tracker/
 
       - name: Add SPA fallback
         run: cp release/wwwroot/index.html release/wwwroot/404.html
